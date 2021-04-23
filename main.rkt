@@ -18,10 +18,10 @@
 
 (define e (make-safe-evaluator 'vr-cabin/chat))
 
+
 (start-twitch-bot
  (handle-twitch-message
   (lambda (expr)
-
     (define evaled
       ((use-evaluator e) expr))
 

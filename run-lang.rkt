@@ -13,6 +13,9 @@
  let
  force
  random
+ color
+
+ ;define
 
  )
 
@@ -33,15 +36,17 @@
 (define-syntax-rule (my-#%app f args ...)
   (let ()
     (displayln (~a "    Calling " 'f))
-    (when (not (eq? 'f 'random)) ;Special things can be free
-      (displayln (~a "    Yeilding " 'f))
+    (when (not (eq? 'f 'random))
+      ;Special things can be free.
+      ;But what if user redefines things like (random)?
+      (displayln (~a "    Yielding " 'f))
       (yield 'f))
     (#%app f args ...)))
 
 (define (force x y z)
   (unreal-eval-js ;Do something fancy with #%top?
-   (unreal:force (mini) x y z))
-  )
+   (unreal:force (mini) x y z)))
 
-
-
+(define (color col)
+  (unreal-eval-js 
+   (unreal:color (mini) col)))

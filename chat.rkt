@@ -10,14 +10,14 @@
          #%datum
          with-twitch-id
 
-         
-
          help
          topic
          mini
+         color
          force
          show-spell
-         run)
+         run
+         )
 
 (define (between? num1 num2)
   (lambda (x)
@@ -75,6 +75,22 @@
                        x y z))
         @~a{May the force be with you...})))
 
+(define/contract (color col)
+  (-> string?
+      string?)
+
+  
+
+  (if (not (hash-has-key? current-minis (current-twitch-id)))
+      @~a{You don't have a mini yet!"}
+      (let ()
+        (displayln "Sending")
+        (unreal-eval-js
+         (unreal:color (hash-ref current-minis (current-twitch-id))
+                       col))
+        (displayln "Sent")
+        @~a{Changing colors...})))
+
 (define safe-ns #f)
 (dynamic-require 'vr-cabin/run-lang #f)
 (define (setup-ns)
@@ -97,7 +113,11 @@
                      (displayln (~a "  Ticking for: " k))
                      (define p (hash-ref current-programs k))
 
-                     (p))
+                     (with-handlers
+                         ([exn:fail?
+                           (lambda (e) (displayln e))])
+                         (p)
+                       ))
                    (hash-keys current-programs))
 
               (displayln "Ticked all programs.  Resting a bit.")
@@ -105,9 +125,6 @@
               (loop))))))
   
   (displayln "Ending def..."))
-
-
-
 
 (define/contract (get-spell spell-id)
   (-> integer? list?)
