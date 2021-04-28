@@ -2,22 +2,40 @@
 
 (require unreal
          (prefix-in unreal: vr-cabin/lang)
-         racket/generator)
+         racket/generator
+         )
 
 (provide #%module-begin
          #%top-interaction
          #%app
          #%datum
          with-twitch-id
+         𐑩𐑯
 
          help
          topic
-         mini
+         spawn
+         (rename-out [spawn mini])
+         (rename-out [run cast])
          color
          force
+         force-to
+         anchor
          show-spell
          run
+         (rename-out [unreal:red red]
+                     [unreal:blue blue]
+                     [unreal:orange orange]
+                     [unreal:green green])
          )
+
+(define (𐑩𐑯)
+  "Nice Shavian, duddeeeeee~!")
+#|
+-First spawn: !!spawn, but not required (spawn if not spawned)
+-Respawn:     !!reset or !!respawn
+-Exit:        !!exit or !!despawn or !!die
+|#
 
 (define (between? num1 num2)
   (lambda (x)
@@ -36,30 +54,30 @@
 (define (help . args)
   (cond
     [(empty? args)
-     @~a{OhMyDog  Use "!!help [topic]" to get more info.  Available topics: mini, help}]
+     @~a{OhMyDog  Use "!!help [topic]" to get more info.  Available topics: spawn, help}]
     [(equal? (list help) args)
-     @~a{OhMyDog Help is a command you use to learn the language I understand.  Try "!!help mini"}]
-    [(equal? (list mini) args)
-     @~a{OhMyDog Mini is a command you use to spawn your mini into the world.  Try "!!mini"}]
+     @~a{OhMyDog Help is a command you use to learn the language I understand.  Try "!!help spawn"}]
+    [(equal? (list spawn) args)
+     @~a{OhMyDog spawn is a command you use to spawn your spawn into the world.  Try "!!spawn"}]
     [(equal? (list force) args)
-     @~a{OhMyDog Force is a command you use to apply a.  Try "!!mini"}]
+     @~a{OhMyDog Force is a command you use to apply a.  Try "!!spawn"}]
  ))
 
-(define current-minis (hash))
+(define current-spawns (hash))
 (define current-programs (hash))
 
 (define runner #f)
 
-(define (mini)
-  (if (hash-has-key? current-minis (current-twitch-id))
-      @~a{You already have a mini!"}
+(define (spawn)
+  (if (hash-has-key? current-spawns (current-twitch-id))
+      (let ()
+        (unreal-eval-js (unreal:respawn (hash-ref current-spawns (current-twitch-id))))
+        @~a{Respawning...!"})
       (let ()
         (define spawned
-          (unreal-eval-js (unreal:mini (current-twitch-id))))
-
-        (set! current-minis (hash-set current-minis (current-twitch-id) spawned))
-
-        @~a{You spawned a mini!"})))
+          (unreal-eval-js (unreal:spawn (current-twitch-id))))
+        (set! current-spawns (hash-set current-spawns (current-twitch-id) spawned))
+        @~a{You spawned a spawn!"})))
 
 (define/contract (force x y z)
   (-> (between? -10000 10000)
@@ -67,26 +85,50 @@
       (between? -10000 10000)
       string?)
 
-  (if (not (hash-has-key? current-minis (current-twitch-id)))
-      @~a{You don't have a mini yet!"}
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!"}
       (let ()
         (unreal-eval-js
-         (unreal:force (hash-ref current-minis (current-twitch-id))
+         (unreal:force (hash-ref current-spawns (current-twitch-id))
                        x y z))
         @~a{May the force be with you...})))
+
+(define/contract (force-to name mag)
+  (-> string?
+      (between? -10000 10000)
+      string?)
+
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!"}
+      (let ()
+        (unreal-eval-js
+         (unreal:force-to (hash-ref current-spawns (current-twitch-id))
+                       name mag))
+        @~a{May the force-to be with you...})))
+
+(define/contract (anchor name)
+  (-> string?
+      string?)
+
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!"}
+      (let ()
+        (unreal-eval-js
+         (unreal:anchor (hash-ref current-spawns (current-twitch-id))
+                       name))
+        @~a{Never gonna let you go...})))
+
 
 (define/contract (color col)
   (-> string?
       string?)
 
-  
-
-  (if (not (hash-has-key? current-minis (current-twitch-id)))
-      @~a{You don't have a mini yet!"}
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!"}
       (let ()
         (displayln "Sending")
         (unreal-eval-js
-         (unreal:color (hash-ref current-minis (current-twitch-id))
+         (unreal:color (hash-ref current-spawns (current-twitch-id))
                        col))
         (displayln "Sent")
         @~a{Changing colors...})))
@@ -121,7 +163,7 @@
                    (hash-keys current-programs))
 
               (displayln "Ticked all programs.  Resting a bit.")
-              (sleep 1)
+              (sleep 0.5)
               (loop))))))
   
   (displayln "Ending def..."))
@@ -154,8 +196,8 @@
 (define/contract (run spell-id)
   (-> integer? string?)
   (setup-ns)
-  (if (not (hash-has-key? current-minis (current-twitch-id)))
-      @~a{You don't have a mini yet!}
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!}
       (let ()
         (define code
           (get-spell spell-id))
@@ -166,7 +208,7 @@
           (define program
             (eval
              `(generator ()
-                         (with-mini ,(hash-ref current-minis (current-twitch-id))
+                         (with-spawn ,(hash-ref current-spawns (current-twitch-id))
                            ,code))
              safe-ns))
 
@@ -180,8 +222,8 @@
 (define/contract (show-spell spell-id)
   (-> integer? string?)
 
-  (if (not (hash-has-key? current-minis (current-twitch-id)))
-      @~a{You don't have a mini yet!}
+  (if (not (hash-has-key? current-spawns (current-twitch-id)))
+      @~a{You don't have a spawn yet!}
       (let ()
         
         (define code

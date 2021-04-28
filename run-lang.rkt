@@ -1,42 +1,100 @@
 #lang racket/base
 
+(require unreal
+         (prefix-in unreal: vr-cabin/lang)
+         racket/generator
+         racket/format
+         racket/match
+         racket/list)
+
 (provide 
  generator
  
- with-mini
+ with-spawn
  (rename-out [my-#%app #%app])
  #%top
  #%module-begin
  #%top-interaction
  #%datum
 
- let
  force
+ force-to
+ anchor
  random
  color
+ (rename-out [unreal:red red]
+             [unreal:blue blue]
+             [unreal:orange orange]
+             [unreal:green green])
+ 
 
- ;define
-
+ let
+ define
+ lambda
+ if
+ cond
+ when
+ match
+ 
+ eq?
+ >=
+ <=
+ =
+ <
+ >
+ +
+ -
+ *
+ /
+ positive?
+ negative?
+ list
+ shuffle
+ length
+ first
+ last
+ rest
+ list-ref
+ min
+ max
  )
 
-(require unreal
-         (prefix-in unreal: vr-cabin/lang)
-         racket/generator
-         racket/format
+(define white-list
+  (list random
+        eq?
+        >=
+        <=
+        =
+        <
+        >
+        +
+        -
+        *
+        /
+        positive?
+        negative?
+        list
+        shuffle
+        length
+        first
+        last
+        rest
+        list-ref
+        min
+        max))
 
-         vr-cabin/chat)
 
-
-(define mini (make-parameter #f))
-(define-syntax-rule (with-mini m lines ...)
+(define spawn (make-parameter #f))
+(define-syntax-rule (with-spawn m lines ...)
   ;Prolly needs to be securified too...
-  (parameterize ([mini m])
+  (parameterize ([spawn m])
     lines ...))
+
 
 (define-syntax-rule (my-#%app f args ...)
   (let ()
     (displayln (~a "    Calling " 'f))
-    (when (not (eq? 'f 'random))
+    (when (not (member f white-list))
       ;Special things can be free.
       ;But what if user redefines things like (random)?
       (displayln (~a "    Yielding " 'f))
@@ -45,8 +103,16 @@
 
 (define (force x y z)
   (unreal-eval-js ;Do something fancy with #%top?
-   (unreal:force (mini) x y z)))
+   (unreal:force (spawn) x y z)))
+
+(define (force-to name mag)
+  (unreal-eval-js
+   (unreal:force-to (spawn) name mag)))
+
+(define (anchor name)
+  (unreal-eval-js
+   (unreal:anchor (spawn) name)))
 
 (define (color col)
   (unreal-eval-js 
-   (unreal:color (mini) col)))
+   (unreal:color (spawn) col)))
