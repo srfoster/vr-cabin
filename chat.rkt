@@ -12,6 +12,7 @@
          with-twitch-id
          𐑩𐑯
 
+         errors
          help
          topic
          spawn
@@ -20,7 +21,9 @@
          color
          force
          force-to
+         de-anchor
          anchor
+         locate
          show-spell
          run
          (rename-out [unreal:red red]
@@ -65,6 +68,7 @@
 
 (define current-spawns (hash))
 (define current-programs (hash))
+(define current-errors (hash))
 
 (define runner #f)
 
@@ -98,26 +102,47 @@
       (between? -10000 10000)
       string?)
 
-  (if (not (hash-has-key? current-spawns (current-twitch-id)))
-      @~a{You don't have a spawn yet!"}
-      (let ()
-        (unreal-eval-js
-         (unreal:force-to (hash-ref current-spawns (current-twitch-id))
-                       name mag))
-        @~a{May the force-to be with you...})))
+  (cond [(not (hash-has-key? current-spawns (current-twitch-id)))
+         @~a{You don't have a spawn yet!"}]
+        [(string=? name (current-twitch-id))
+         @~a{You can only force towards other things.}]
+        [else
+         (let ()
+           (unreal-eval-js
+            (unreal:force-to (hash-ref current-spawns (current-twitch-id))
+                             name mag))
+           @~a{May the force-to be with you...})]))
 
 (define/contract (anchor name)
   (-> string?
       string?)
 
-  (if (not (hash-has-key? current-spawns (current-twitch-id)))
-      @~a{You don't have a spawn yet!"}
-      (let ()
-        (unreal-eval-js
-         (unreal:anchor (hash-ref current-spawns (current-twitch-id))
-                       name))
-        @~a{Never gonna let you go...})))
+  (cond [(not (hash-has-key? current-spawns (current-twitch-id)))
+         @~a{You don't have a spawn yet!}]
+        [(string=? name (current-twitch-id))
+         @~a{You can only anchor to other things.}]
+        [else
+         (let ()
+           (unreal-eval-js
+            (unreal:anchor (hash-ref current-spawns (current-twitch-id))
+                           name))
+           @~a{Never gonna let you go...})]))
 
+(define (locate [name (current-twitch-id)])
+  (let ()
+    (unreal-eval-js
+     (unreal:locate (unreal:with-name name)))))
+
+(define/contract (de-anchor)
+  (-> string?)
+
+  (cond [(not (hash-has-key? current-spawns (current-twitch-id)))
+         @~a{You don't have a spawn yet!}]
+        [else
+         (let ()
+           (unreal-eval-js
+            (unreal:de-anchor (hash-ref current-spawns (current-twitch-id))))
+           @~a{De-anchoring...})]))
 
 (define/contract (color col)
   (-> string?
@@ -132,6 +157,10 @@
                        col))
         (displayln "Sent")
         @~a{Changing colors...})))
+
+(define (program-stopped-working? e)
+  (define m (exn-message e))
+  (string-contains? m "cannot call a running generator"))
 
 (define safe-ns #f)
 (dynamic-require 'vr-cabin/run-lang #f)
@@ -157,8 +186,21 @@
 
                      (with-handlers
                          ([exn:fail?
-                           (lambda (e) (displayln e))])
-                         (p)
+                           (lambda (e)
+                             (if (program-stopped-working? e)
+                                 (let ()
+                                   (displayln "The program stopped working! Kill it!")
+                                   (set! current-programs
+                                         (hash-remove current-programs
+                                                      k)))
+                                 (let ()
+                                   (displayln "Adding a new error now...")
+                                   (set! current-errors
+                                         (hash-update current-errors
+                                                      k
+                                                      (lambda (es)
+                                                        (cons e es)))))))])
+                       (p)
                        ))
                    (hash-keys current-programs))
 
@@ -193,8 +235,8 @@
 
   code)
 
-(define/contract (run spell-id)
-  (-> integer? string?)
+(define/contract (run spell-id . args)
+  (->* (integer?) #:rest (listof any/c) string?)
   (setup-ns)
   (if (not (hash-has-key? current-spawns (current-twitch-id)))
       @~a{You don't have a spawn yet!}
@@ -208,14 +250,19 @@
           (define program
             (eval
              `(generator ()
-                         (with-spawn ,(hash-ref current-spawns (current-twitch-id))
-                           ,code))
+                         (with-args ',args
+                             (with-spawn ,(hash-ref current-spawns (current-twitch-id))
+                           ,code)))
              safe-ns))
 
           (set! current-programs
                 (hash-set current-programs
                           (current-twitch-id)
                           program))
+          (set! current-errors
+                (hash-set current-errors
+                          (current-twitch-id)
+                          '()))
           
           @~a{Running your spell... @code}))))
 
@@ -231,3 +278,8 @@
 
         @~a{This is your code: @code})
       ))
+
+(define/contract (errors [twitch-id (current-twitch-id)])
+  (-> list?)
+
+  (map exn-message (hash-ref current-errors twitch-id '())))

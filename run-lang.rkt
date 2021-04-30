@@ -11,6 +11,8 @@
  generator
  
  with-spawn
+ with-args
+ args
  (rename-out [my-#%app #%app])
  #%top
  #%module-begin
@@ -20,13 +22,17 @@
  force
  force-to
  anchor
+ de-anchor
+ locate
  random
  color
- (rename-out [unreal:red red]
+ 
+ (rename-out [unreal:distance distance]
+             [unreal:red red]
              [unreal:blue blue]
              [unreal:orange orange]
-             [unreal:green green])
- 
+             [unreal:green green]
+             [unreal:with-name with-name])
 
  let
  define
@@ -35,7 +41,12 @@
  cond
  when
  match
+ match-define
+ quote
+ quasiquote
+ unquote
  
+ displayln
  eq?
  >=
  <=
@@ -46,6 +57,12 @@
  -
  *
  /
+ round
+ hash
+ hash-ref
+ hash-keys
+ hash-values
+ hash-has-key?
  positive?
  negative?
  list
@@ -60,7 +77,7 @@
  )
 
 (define white-list
-  (list random
+  (list displayln
         eq?
         >=
         <=
@@ -71,6 +88,12 @@
         -
         *
         /
+        round
+        hash
+        hash-ref
+        hash-keys
+        hash-values
+        hash-has-key?
         positive?
         negative?
         list
@@ -81,15 +104,22 @@
         rest
         list-ref
         min
-        max))
-
+        max
+        unreal:locate
+        unreal:distance))
 
 (define spawn (make-parameter #f))
 (define-syntax-rule (with-spawn m lines ...)
-  ;Prolly needs to be securified too...
-  (parameterize ([spawn m])
-    lines ...))
+  (let ()
+    (when (spawn)
+      (error "You're not allowed to do that..."))
+    (parameterize ([spawn m])
+      lines ...)))
 
+(define args (make-parameter #f))
+(define-syntax-rule (with-args a lines ...)
+  (parameterize ([args a])
+    lines ...))
 
 (define-syntax-rule (my-#%app f args ...)
   (let ()
@@ -112,6 +142,14 @@
 (define (anchor name)
   (unreal-eval-js
    (unreal:anchor (spawn) name)))
+
+(define (de-anchor)
+  (unreal-eval-js
+   (unreal:de-anchor (spawn))))
+
+(define (locate obj)
+  (unreal-eval-js
+   (unreal:locate obj)))
 
 (define (color col)
   (unreal-eval-js 

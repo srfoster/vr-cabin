@@ -2,9 +2,13 @@
 
 (provide spawn
          respawn
+         distance
          force
          force-to
          anchor
+         de-anchor
+         locate
+         with-name
          color
          let
          green
@@ -86,6 +90,35 @@
  var spawn = @(->unreal-value spawn);
  var obj = @(with-name name);
  spawn.AddChild(obj);
+ })
+
+(define/contract (locate obj)
+  (-> any/c unreal-value?)
+  
+  @unreal-value{
+var obj = @(->unreal-value obj);
+return obj.GetActorLocation();
+ })
+
+(define/contract (distance a b)
+  (-> hash? hash? number?)
+  
+  (define x1 (hash-ref a 'X))
+  (define y1 (hash-ref a 'Y))
+  (define z1 (hash-ref a 'Z))
+  (define x2 (hash-ref b 'X))
+  (define y2 (hash-ref b 'Y))
+  (define z2 (hash-ref b 'Z))
+  (sqrt (+ (sqr (- x1 x2))
+           (sqr (- y1 y2))
+           (sqr (- z1 z2)))))
+
+(define/contract (de-anchor spawn)
+  (-> any/c unreal-value?)
+  
+  @unreal-value{
+ var spawn = @(->unreal-value spawn);
+ spawn.DetachChild();
  })
 
 (define green
